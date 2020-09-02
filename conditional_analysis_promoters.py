@@ -51,7 +51,6 @@ class ConditionalTest:
         self.region = region
         self.pwm = pwm
         self.chromosome = self.region.split(":")[0]
-        self.dir = "conditional_analysis/%s" % self.name()
         if pop == "European":
             self.pop_lower = "white"
         elif pop == "African":
@@ -66,6 +65,8 @@ class ConditionalTest:
         self.cond_variants = list(sorted(set(cond_variants),key=lambda x:(x.chromosome, x.position)))
     def name(self):
         return "test_%s_%s_%s_%s_%s" % (self.gene, self.pop, self.trait, self.pwm, self.region.replace(":","_").replace("-","to"))
+    def dir(self):
+        return "conditional_analysis/%s" % self.name()
     def __repr__(self):
         return "Test"
     def __eq__(self, other):
@@ -146,22 +147,22 @@ def process_test(test):
     #original_line = os.popen("zcat %s | grep '%s'" % (original_epacts_gz, test.region.split(":")[1])).read().strip() # TODO slow
 
     # Paths of the files created during the conditional analysis
-    execute("mkdir -p %s" % test.dir, verbose = False)
-    additional_covar_file = "%s/covar.vcf" % test.dir
-    log = "%s/epacts.log" % test.dir
-    new_top5000 = "%s/conditional.epacts.top5000" % test.dir
-    non_conditional_top5000 = "%s/non_conditional.epacts.top5000" % test.dir
-    summary_file = "%s/summary" % test.dir
-    non_conditional_makefile = "%s/non_conditional.Makefile" % test.dir
-    makefile = "%s/conditional.Makefile" % test.dir
+    execute("mkdir -p %s" % test.dir(), verbose = False)
+    additional_covar_file = "%s/covar.vcf" % test.dir()
+    log = "%s/epacts.log" % test.dir()
+    new_top5000 = "%s/conditional.epacts.top5000" % test.dir()
+    non_conditional_top5000 = "%s/non_conditional.epacts.top5000" % test.dir()
+    summary_file = "%s/summary" % test.dir()
+    non_conditional_makefile = "%s/non_conditional.Makefile" % test.dir()
+    makefile = "%s/conditional.Makefile" % test.dir()
     ped_file = "residuals/%s/%s.ped" % (test.pop_lower, test.trait)
-    modified_ped_file = "%s/conditional.ped" % test.dir
-    region_bed = "%s/region.bed" % test.dir
+    modified_ped_file = "%s/conditional.ped" % test.dir()
+    region_bed = "%s/region.bed" % test.dir()
     sample_file = "samples_%s" % test.pop_lower
-    filtered_sample_file = "%s/samples" % test.dir
-    scan_file = "%s/scan.vcf.gz" % test.dir
+    filtered_sample_file = "%s/samples" % test.dir()
+    scan_file = "%s/scan.vcf.gz" % test.dir()
     # Removed --min-maf 5 because this limit is applied to the whole population. Here we only look at one ethnicity
-    scan_command =                 "find-tfbs --threads 1 -c %s -o %s.temp --min_maf 0 --samples %s -r hg38.fa -i %s/freeze.8.%s.pass_only.phased.bcf -n %s -b %s -p HOCOMOCOv11_full_pwms_HUMAN_mono.txt --pwm_threshold_directory thresholds --pwm_threshold 0.0001 --verbose > %s/scan.log" % (test.chromosome, scan_file, filtered_sample_file, BCF_DIR, test.chromosome, test.pwm, region_bed, test.dir)
+    scan_command =                 "find-tfbs --threads 1 -c %s -o %s.temp --min_maf 0 --samples %s -r hg38.fa -i %s/freeze.8.%s.pass_only.phased.bcf -n %s -b %s -p HOCOMOCOv11_full_pwms_HUMAN_mono.txt --pwm_threshold_directory thresholds --pwm_threshold 0.0001 --verbose > %s/scan.log" % (test.chromosome, scan_file, filtered_sample_file, BCF_DIR, test.chromosome, test.pwm, region_bed, test.dir())
 
     # Create bed files
     if not os.path.isfile(region_bed):
@@ -188,13 +189,13 @@ def process_test(test):
     samples = open(sample_file, "rt").read().strip().split("\t")
 
     can_do_conditional_analysis = False
-    print("Reached 1")
+    #print("Reached 1")
     # Create covariable phenotype file, with additional covariates (the conditional variants)
     if not test.cond_variants:
         result.conditional_didnt_run = "No known variants for conditional analysis"
         print(result.conditional_didnt_run)
         return result
-    print("Reached 2")
+    #print("Reached 2")
     if not os.path.isfile(additional_covar_file+".OK"):
         for (i, cond_variant) in enumerate(test.cond_variants):
             if i == 0:
@@ -205,7 +206,7 @@ def process_test(test):
                 end = ">>"
             execute("bcftools view -f '%%LINE\\n' -r %s:%s -S %s %s/freeze.8.%s.pass_only.phased.bcf | grep -v '##' %s | awk '{if ($1 == \"#CHROM\" || (length($4) == 1 && length($5) == 1)) {print;}}' | cut -f 1,2,4,5,10- | sed 's/0|0/0/g' | sed 's/0|1/1/g' | sed 's/1|0/1/g' | sed 's/1|1/2/g' %s %s" % (cond_variant.chromosome, cond_variant.position, filtered_sample_file, BCF_DIR, cond_variant.chromosome, prefilter, end, additional_covar_file))
         execute("touch %s.OK" % additional_covar_file)
-    print("Reached 3")
+    #print("Reached 3")
     if not os.path.isfile(modified_ped_file):
         number_of_lines_in_additional_covar_file = int(os.popen("grep -v CHROM %s | wc -l" % additional_covar_file).read().strip().split(" ")[0])
         if number_of_lines_in_additional_covar_file > 1:
@@ -219,7 +220,7 @@ def process_test(test):
     else:
         can_do_conditional_analysis = True
         covar_names = add_covars(ped_file, additional_covar_file, modified_ped_file)
-    print("Reached 4")
+    #print("Reached 4")
     number_of_lines_in_additional_covar_file = int(os.popen("grep -v CHROM %s | wc -l" % additional_covar_file).read().strip().split(" ")[0])
     if not (number_of_lines_in_additional_covar_file > 1):
         result.conditional_didnt_run = "No known variants in TOPMed for conditional analysis"
@@ -227,7 +228,7 @@ def process_test(test):
         return result
         
     # Extract the variants from the ATAC-seq peak
-    print("Reached 5 %s" % scan_file)
+    #print("Reached 5 %s %s %s" % (scan_file, result.test.originalpvalue, result.to_line()))
     if not os.path.isfile(scan_file):
         print("Create %s" % scan_file)
         execute(scan_command)
@@ -235,7 +236,7 @@ def process_test(test):
         execute("rm %s.temp" % scan_file)
         execute("tabix -f -p vcf %s" % scan_file)
 
-    makefile_linear = "%s/conditional_linear.Makefile" % test.dir
+    makefile_linear = "%s/conditional_linear.Makefile" % test.dir()
     if not os.path.isfile(makefile_linear):
         print("Create %s" % makefile_linear)
         cov_str = " --cov PC1 --cov PC2 --cov PC3 --cov PC4 --cov PC5 --cov PC6 --cov PC7 --cov PC8 --cov PC9 --cov PC10 " + " ".join("--cov %s" % x for x in covar_names)
@@ -285,7 +286,7 @@ def process_test(test):
         emmax_pvalue = float(open(emmax_pvalue_file, "rt").read())
         result.emmax_pvalue = emmax_pvalue
 
-
+    #print("Reached 10 %s" % (result.to_line()))
     return result
 
     if not os.path.isfile(summary_file):
@@ -312,7 +313,7 @@ def process_test(test):
                 counts = [l.split("\t")[index].strip() for l in open(modified_ped_file, "rt").readlines()[1:] if l]
                 f.write("%s\t0:%s 1:%s 2:%s\n" % (cond_variant, counts.count("0"), counts.count("1"), counts.count("2")))
 
-            buffer = os.popen("grep '^score' %s/scan.log | cut -d' ' -f 8,10 | sort | uniq -c" % test.dir).read()
+            buffer = os.popen("grep '^score' %s/scan.log | cut -d' ' -f 8,10 | sort | uniq -c" % test.dir()).read()
             beginnings_of_match = list(sorted(list(set([int(x.split(" ")[1]) for x in re.findall("\d+ \d+", buffer)]))))
 
             f.write("\n\nBeginning of matches and how many unique haplotypes have these matches:\n")
@@ -322,7 +323,7 @@ def process_test(test):
             f.write(os.popen("zcat %s | cut -f 1-13" % scan_file).read())
 
             p_value = original_line.split("\t")[8]
-            conditional_p_value = os.popen("zcat %s/conditional.epacts.gz | grep %s | cut -f 9" % (test.dir, test.region.split(":")[1])).read().strip()
+            conditional_p_value = os.popen("zcat %s/conditional.epacts.gz | grep %s | cut -f 9" % (test.dir(), test.region.split(":")[1])).read().strip()
             counts = extract_counts(scan_file)
             f.write("\n#TABLE %s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (test.gene, test.pop, test.trait, test.pwm, test.region, counts, "N/A", p_value, conditional_p_value))
             
@@ -352,7 +353,7 @@ def is_duffy(region):
 def is_hemoglobin_chr16(region):
     chromosome, start, end = parse_coordinates(region)
     center = (start + end) / 2
-    return ((chromosome == "chr16") and (center <= 400000))
+    return ((chromosome == "chr16") and (center <= 600000))
 
 def is_hla(region):
     chromosome, start, end = parse_coordinates(region)
@@ -420,8 +421,9 @@ def main():
         if region in associated_regions_that_overlap_promoters_enhancers:
             # We the region overlaps a promoter, we want to run a conditional test over the BCX2 hematopoietic variants that are in the vicinity
             # Whether or not there's any variant to run a conditional test, we want to know the frequency of the variants that create/disrupt the TFBS in this region. So we need to run find-tfbs in verbose mode and parse the logs
-            test.set_cond_variants(set([bcx2_variant for bcx2_variant in bcx2_variants_coordinates if close_enough((bcx2_variant.chromosome, bcx2_variant.position), parse_coordinates(region), tolerance = 1000000)]))
             test.gene, regulatory = associated_regions_that_overlap_promoters_enhancers[region]
+            test.set_cond_variants(set([bcx2_variant for bcx2_variant in bcx2_variants_coordinates if close_enough((bcx2_variant.chromosome, bcx2_variant.position), parse_coordinates(region), tolerance = 1000000)]))
+
             is_promoter = (regulatory == "Promoter")
             is_enhancer = (regulatory == "Enhancer")
             if is_promoter:
@@ -430,9 +432,9 @@ def main():
                 elif duffy or hemoglobin_chr16 or hla:
                     results.append(Result(test, duffy, hemoglobin_chr16, hla, is_promoter, is_enhancer, None, None)) # No conditional analysis for these regions
                 elif float(pvalue) < 1e-9:
-                    print("Loaded conditional test definition: %s" % test.name())
-                    if test.name() == "test_RENBP_African_RBC_CTCFL_HUMAN.H11MO.0.A_chrX_153945909to153946614":
-                        tests.append(test)
+                    #if test.name() == "test_RENBP_African_RBC_CTCFL_HUMAN.H11MO.0.A_chrX_153945909to153946614":
+                    print("Loaded conditional test definition for promoter (p<1e-9): %s in %s" % (test.name(), test.dir()))
+                    tests.append(test)
                 else:
                     results.append(Result(test, duffy, hemoglobin_chr16, hla, is_promoter, is_enhancer, None, None))
             else:
@@ -442,11 +444,15 @@ def main():
 
     print("Number of tests: %s" % len(tests))
 
+    # Multi-thread
     thread_number = int(sys.argv[1])
     #with Pool(thread_number) as p:
     #    results.extend(p.map(process_test, tests))
+
+    # Single-thread, for debugging
     for t in tests:
-        print(process_test(t))
+        results.append(process_test(t))
+        print(results[-1])
 
     f = open("summary_table.tsv", "wt")
     header = "POPULATION	TRAIT	CELL	COORDS	TF	PVALUE_EMMAX	BETA_EMMAX	REGULATORY_FEATURE	GENE	CONDITIONAL_LINEAR_PVALUE	CONDITIONAL_EMMAX_PVALUE	COMMENT"
