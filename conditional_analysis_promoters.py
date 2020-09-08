@@ -455,8 +455,9 @@ def main():
         print(results[-1])
 
     f = open("summary_table.tsv", "wt")
+    comment = "The GENE column indicates the genes associated with promoters (as defined by Ensembl's regulatory build), and the genes located less than one megabase away from enhancers"
     header = "POPULATION	TRAIT	CELL	COORDS	TF	PVALUE_EMMAX	BETA_EMMAX	REGULATORY_FEATURE	GENE	CONDITIONAL_LINEAR_PVALUE	CONDITIONAL_EMMAX_PVALUE	COMMENT"
-    f.write("\n".join([header] + [r.to_line() for r in results]))
+    f.write("\n".join([comment, header] + [r.to_line() for r in results]))
     f.close()
 
     

@@ -10,6 +10,8 @@ in with pkgs; {
     version = "1";
     buildInputs = [
       pkgs.R
+      pkgs.rPackages.ggplot2
+      pkgs.rPackages.tidyverse
       pkgs.gnuplot
       epacts
       tabix

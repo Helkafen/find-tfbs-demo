@@ -305,3 +305,25 @@ rule conditional_analysis:
 
 		python3 conditional_analysis_promoters.py 10 %s
 		touch conditional_analysis.done""" % BCF_DIR
+
+# Run the conditional analysis before this. We reuse the scan.vcf.gz for CTCFL in the promoter of RENBP
+rule RENBP_violin_plot:
+	input: "conditional_analysis.done"
+	output: f = "RENBP_violin_plot/RBC_TFBScount_female.png", m = "RENBP_violin_plot/RBC_TFBScount_male.png"
+	shell: """
+		mkdir -p RENBP_violin_plot
+		echo "ID,SEX" > RENBP_violin_plot/sex
+		cat pheno.tab | awk '{{ if($3=="male") {{print $1,"M"}}}}' OFS=',' >> RENBP_violin_plot/sex
+		cat pheno.tab | awk '{{ if($3=="female") {{print $1,"F"}}}}' OFS=',' >> RENBP_violin_plot/sex
+		cut -f 2,6 residuals/black/RBC.ped | sed "s/IND_ID/ID/g" | sed "s/PHENO/RBC/g" > RENBP_violin_plot/raw_rbc.tab
+		zcat conditional_analysis/test_RENBP_African_RBC_CTCFL_HUMAN.H11MO.0.A_chrX_153945909to153946614/scan.vcf.gz | cut -f 10- | python -c "import fileinput; stdin = fileinput.input(); header = stdin.readline().strip().split('\\t'); content = [3+round(float(x.split(':')[1])*1.5) for x in stdin.readline().strip().split('\\t')]; f = open('RENBP_violin_plot/TFBS_count','wt'); f.write('ID,TFBS_count\\n' + '\\n'.join(['%s,%s' % (i,c) for (i,c) in zip(header, content)])); f.close()"
+		Rscript RENBP_plot.R
+		"""
+
+# UCSC data
+# echo "rack type=bedGraph name=chromatin description=chromatin visibility=display_mode autoScale=on alwaysZero=off gridDefault=off maxHeightPixels=100:50:10 graphType=bar viewLimits=0:1000 yLineOnOff=off smoothingWindow=2" > MEP_hg38lo_chrX_152945909_154945909_UCSCformat.bedGraph
+# cat MEP_hg38lo_chrX_152945909_154945909.bed | awk '{print $1,$2,$3,$4*286}' OFS='\t' >> MEP_hg38lo_chrX_152945909_154945909_UCSCformat.bedGraph
+# echo "track name=GWAS_BCX2_Eur type=bedDetail description='GWAS sentinels BCX2'" > BCX2_GWAS_sentinel_UCSCformat.bed
+# cat myigv/BCX2_GWAS_sentinel.bed | grep chr | awk '{print $1,$2,$3,0,$4}' OFS='\t' >> BCX2_GWAS_sentinel_UCSCformat.bed
+# http://www.genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&lastVirtModeType=default&lastVirtModeExtraState=&virtModeType=default&virtMode=0&nonVirtPosition=&position=chrX%3A153834798%2D154057019&hgsid=891702723_v6aPmBwHIb628TmHi8T0hDfosZTB
+# chrX:153871670-154040854
